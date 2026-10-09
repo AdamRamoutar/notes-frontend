@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    
+    <div class="login-container">
+        <h2>Login</h2>
+
+        <form id="form-id">
+            <!--email field-->
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" placeholder="Enter email" required>
+            </div>
+
+            <!--password field-->
+            <div>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password" required>
+            </div>
+
+            <!--submit button-->
+            <button class="login-btn" type="submit">Login</button>
+
+            <!--end of form-->
+        </form>
+    </div>
+
+    <!--hidden list of notes-->
+    <div class="notes-container" style="display: none;">
+        <h2>Your Notes</h2>
+        
+        <ul class="notes-list">
+            <li>Note 1</li>
+            <li>Note 2</li>
+            <li>Note 3</li>
+        </ul>
+
+        <!--add note form-->
+        <div id="add-note">
+            <!--Add note btn-->
+            <br>
+            <button class="addNote-btn" type="submit">Add note</button>
+            <br>
+            <!--Entering new note title-->
+            <label for="newNoteTitle">Title</label>
+            <input type="text" id="newNoteTitle" name="newNoteTitle" placeholder="Enter new note title">
+            <br>
+            <!--Entering new note-->
+            <label for="newNote">Note</label>
+            <input type="text" id="newNote" name="newNote" placeholder="Enter new note">
+
+            <button class="logout-btn" type="submit" style="display: none;">Logout</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('form-id').addEventListener('submit', async function (event) {
+            
+            event.preventDefault();
+
+            const userEmail = document.getElementById('email').value;
+            const userPassword = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({email: userEmail, password: userPassword})
+                });
+
+                if(!response.ok){
+                    throw new Error('Login Failed');
+                }
+
+                const result = await response.json();
+
+                if(result.token) {
+                    localStorage.setItem('token', result.token);
+                }
+
+                document.querySelector('.login-container').style.display = 'none';
+                document.querySelector('.notes-container').style.display = 'block';
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+
+                await loadNotes();
+
+            }
+            catch (err) {
+                console.error(err);
+                alert('Login failed. Please check your credentials and try again.');
+            }
+        });
+
+        async function loadNotes() {
+            try{
+                const token = localStorage.getItem('token');
+                
+                if(!token) {
+                    throw new Error('No token, please log in');
+                }
+
+                 const response = await fetch('http://localhost:3000/notes', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if(!response.ok) {
+                    if(response.status ===401) {
+                        localStorage.removeItem('token');
+                    }
+
+                    throw new Error('Failed to fetch protected data');
+                }
+
+                const data = await response.json();
+
+                const notesList = document.querySelector('.notes-list');
+                notesList.innerHTML = '';
+            
+                data.forEach(note => {
+                    const li = document.createElement('li');
+                    li.textContent = note.title + ': ' + note.content;
+                    notesList.appendChild(li);
+                });
+
+                document.querySelector('.logout-btn').style.display = 'block';
+
+            }
+            catch(err){
+                console.error(err);
+                alert('Failed to fetch notes. Please try again later.');
+            }
+        }
+
+        document.querySelector('.addNote-btn').addEventListener('click', async function (event) {
+           
+            event.preventDefault();
+
+            const newNoteTitle = document.getElementById('newNoteTitle').value;
+            const newNoteContent = document.getElementById('newNote').value;
+                
+            try {
+                const token = localStorage.getItem('token');
+
+                if(!token) {
+                    throw new Error('No token, please login');
+                }
+
+                const response = await fetch('http://localhost:3000/notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({title: newNoteTitle, content: newNoteContent})
+                });
+
+                if(!response.ok) {
+                    throw new Error('HTTP error! Status: ${response.status}');
+                }
+
+                const result = await response.json();
+                console.log('Note added');
+                document.getElementById('newNoteTitle').value = '';
+                document.getElementById('newNote').value = '';
+
+                loadNotes();
+            }
+            catch(err) {
+                console.error(err);
+                alert('Failed to add note. Please try again later.');
+            }      
+        });
+
+        document.querySelector('.logout-btn').addEventListener('click', function (event) {
+        
+            localStorage.removeItem('token');
+            document.querySelector('.login-container').style.display = 'block';
+            document.querySelector('.notes-container').style.display = 'none';
+            const notesList = document.querySelector('.notes-list');
+            notesList.innerHTML = '';
+        });
+
+    </script>
+
+</body>
+</html>
