@@ -7,13 +7,41 @@
 </head>
 <body>
 
-    
-    <div class="login-container">
+    <div class="register-container" style="display: none;">
+        <h2>Register</h2>
+
+        <form id="register-form-id">
+            <!--email field-->
+            <div>
+                <label for="register-email">Email</label>
+                <input type= "text" id="register-email" name="register-email" placeholder="Enter email" required>
+            </div>
+
+            <!--password field-->
+            <div>
+                <label for="register-password">Password</label>
+                <input type="password" id="register-password" name="register-password" placeholder="Enter password" required>
+            </div>
+
+            <!--submit button-->
+            <button class="register-btn" type="submit">Register</button>
+
+            <br>
+            <p class="toggle-text">
+                Have an account? <a href="#" id="login-link">Login here</a>
+            </p>
+
+            <!--end of form-->
+        </form>
+    </div>
+
+    <div class="login-container" style="display: block;">
         <h2>Login</h2>
 
-        <form id="form-id">
+        <form id="login-form-id">
+
             <!--email field-->
-            <div class="input-group">
+            <div>
                 <label for="email">Email</label>
                 <input type="text" id="email" name="email" placeholder="Enter email" required>
             </div>
@@ -25,10 +53,17 @@
             </div>
 
             <!--submit button-->
+
             <button class="login-btn" type="submit">Login</button>
+            <br>
+            <p class="toggle-text">
+                Don't have an account? <a href="#" id="register-link">Register here</a>
+            </p>
 
             <!--end of form-->
         </form>
+
+        
     </div>
 
     <!--hidden list of notes-->
@@ -62,8 +97,62 @@
     <script>
 
         const API_URL = window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://notes-api-86ah.onrender.com';
-        
-        document.getElementById('form-id').addEventListener('submit', async function (event) {
+
+        const registerLink = document.getElementById('register-link');
+        registerLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            document.querySelector('.login-container').style.display = 'none';
+            document.querySelector('.register-container').style.display = 'block';
+        });
+       
+        document.getElementById('register-form-id').addEventListener('submit', async function (event) {
+
+            event.preventDefault();
+
+            const userEmail = document.getElementById('register-email').value;
+            const userPassword = document.getElementById('register-password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({email: userEmail, password: userPassword})
+                });
+
+                if(response.status === 409) {
+                    alert('Email already exists. Please use a different email.');
+                    return;
+                }
+
+                if(!response.ok){
+                    throw new Error('Registration Failed');
+                }
+
+                const result = await response.json();
+                alert('Registration successful! You can now log in.');
+                document.querySelector('.register-container').style.display = 'none';
+                document.querySelector('.login-container').style.display = 'block';
+                document.getElementById('email').value = '';
+                document.getElementById('password').value = '';
+
+            }
+            catch (err) {
+                console.error(err);
+                alert('Registration failed. Please try again.');
+            }
+
+        });
+
+        const loginLink = document.getElementById('login-link');
+        loginLink.addEventListener('click', function (event) {
+            event.preventDefault();
+            document.querySelector('.login-container').style.display = 'block';
+            document.querySelector('.register-container').style.display = 'none';
+        });
+
+        document.getElementById('login-form-id').addEventListener('submit', async function (event) {
             
             event.preventDefault();
 
@@ -171,7 +260,7 @@
                 });
 
                 if(!response.ok) {
-                    throw new Error('HTTP error! Status: ${response.status}');
+                    throw new Error(`HTTP error! Status: ${response.status}`);
                 }
 
                 const result = await response.json();
