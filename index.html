@@ -212,7 +212,6 @@
                     if(response.status ===401) {
                         localStorage.removeItem('token');
                     }
-
                     throw new Error('Failed to fetch protected data');
                 }
 
@@ -223,18 +222,56 @@
             
                 data.forEach(note => {
                     const li = document.createElement('li');
-                    li.textContent = note.title + ': ' + note.content;
+                    li.dataset.id = note.id;
+                    const titleSpan = document.createElement('span');
+                    const contentSpan = document.createElement('span');
+
+                    titleSpan.textContent = `${note.title}:`;
+                    titleSpan.style.marginRight = '10px';
+
+                    contentSpan.textContent = note.content;
+                    contentSpan.style.marginRight = '15px';
+
+                    li.appendChild(titleSpan);
+                    li.appendChild(contentSpan);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Delete';
+
+                    deleteBtn.addEventListener('click', async function () {
+
+                        try {
+                            const deleteResponse = await fetch(`${API_URL}/notes/${note.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                }
+                            });
+
+                            if(!deleteResponse.ok) {
+                                throw new Error('Failed to delete note');
+                            }
+
+                            li.remove();
+                        }
+                        catch(err) {
+                            console.error(err);
+                            alert('Failed to delete note. Please try again later.');
+                        }
+                    });
+
+                    li.appendChild(deleteBtn);
                     notesList.appendChild(li);
+                    
                 });
 
                 document.querySelector('.logout-btn').style.display = 'block';
-
             }
             catch(err){
                 console.error(err);
                 alert('Failed to fetch notes. Please try again later.');
             }
-        }
+        };
 
         document.querySelector('.addNote-btn').addEventListener('click', async function (event) {
            
@@ -242,6 +279,11 @@
 
             const newNoteTitle = document.getElementById('newNoteTitle').value;
             const newNoteContent = document.getElementById('newNote').value;
+
+            if(!newNoteTitle || !newNoteContent) {
+                alert('Please fill in both title and content for the note.');
+                return;
+            }
                 
             try {
                 const token = localStorage.getItem('token');
