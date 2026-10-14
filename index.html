@@ -91,12 +91,16 @@
             <input type="text" id="newNote" name="newNote" placeholder="Enter new note">
 
             <button class="logout-btn" type="submit" style="display: none;">Logout</button>
+            <button class="cancel-btn" style = "display: none;">Cancel</button>
         </div>
     </div>
 
     <script>
 
         const API_URL = window.location.hostname === '127.0.0.1' ? 'http://localhost:3000' : 'https://notes-api-86ah.onrender.com';
+
+        let editingNoteId = null;
+        let deleteNoteId = null;
 
         const registerLink = document.getElementById('register-link');
         registerLink.addEventListener('click', function (event) {
@@ -238,6 +242,11 @@
                     const deleteBtn = document.createElement('button');
                     deleteBtn.textContent = 'Delete';
 
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Edit';
+                    
+
+
                     deleteBtn.addEventListener('click', async function () {
 
                         try {
@@ -252,7 +261,23 @@
                                 throw new Error('Failed to delete note');
                             }
 
-                            li.remove();
+                            deleteNoteId = note.id;
+                            
+                            if(editingNoteId===deleteNoteId){
+                                editingNoteId = null;
+                                document.getElementById('newNoteTitle').value = '';
+                                document.getElementById('newNote').value = '';
+                                document.querySelector('.addNote-btn').textContent = 'Add note';
+                                document.querySelector('.cancel-btn').style.display = "none";
+                                li.remove();
+                                deleteNoteId = null;
+                            }
+                            else {
+                                li.remove();
+                                deleteNoteId = null;
+                            }
+
+                            
                         }
                         catch(err) {
                             console.error(err);
@@ -260,7 +285,17 @@
                         }
                     });
 
+                    editBtn.addEventListener('click' , function () {
+                        document.querySelector('.cancel-btn').style.display = 'block';
+                        editingNoteId = note.id;
+                        document.getElementById('newNoteTitle').value = `${note.title}`;
+                        document.getElementById('newNote').value = `${note.content}`;
+                        document.querySelector('.addNote-btn').textContent = 'Save';
+                    });
+
+                    
                     li.appendChild(deleteBtn);
+                    li.appendChild(editBtn);
                     notesList.appendChild(li);
                     
                 });
@@ -273,10 +308,27 @@
             }
         };
 
+        document.querySelector('.cancel-btn').addEventListener('click', function () {
+            editingNoteId = null;
+            document.querySelector('.cancel-btn').style.display = "none";
+            document.getElementById('newNoteTitle').value = '';
+            document.getElementById('newNote').value = '';
+            document.querySelector('.addNote-btn').textContent = 'Add note';
+
+        });
+
         document.querySelector('.addNote-btn').addEventListener('click', async function (event) {
            
             event.preventDefault();
 
+            const submitBtn = event.currentTarget;
+
+            let method, link;
+            ({ method, link } = editingNoteId 
+                            ? { method: 'PUT', link: `${API_URL}/notes/${editingNoteId}`} 
+                            : { method: 'POST', link: `${API_URL}/notes` });
+
+        
             const newNoteTitle = document.getElementById('newNoteTitle').value;
             const newNoteContent = document.getElementById('newNote').value;
 
@@ -292,8 +344,8 @@
                     throw new Error('No token, please login');
                 }
 
-                const response = await fetch(`${API_URL}/notes`, {
-                    method: 'POST',
+                const response = await fetch(link, {
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
@@ -305,11 +357,14 @@
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
 
+                document.querySelector('.addNote-btn').textContent = 'Add note';
+                
+                editingNoteId = null;
                 const result = await response.json();
                 console.log('Note added');
                 document.getElementById('newNoteTitle').value = '';
                 document.getElementById('newNote').value = '';
-
+                
                 loadNotes();
             }
             catch(err) {
@@ -323,6 +378,10 @@
             localStorage.removeItem('token');
             document.querySelector('.login-container').style.display = 'block';
             document.querySelector('.notes-container').style.display = 'none';
+            document.getElementById('newNoteTitle').value = '';
+            document.getElementById('newNote').value = '';
+            document.querySelector('.addNote-btn').textContent = 'Add note';
+            document.querySelector('.cancel-btn').style.display = "none";
             const notesList = document.querySelector('.notes-list');
             notesList.innerHTML = '';
         });
