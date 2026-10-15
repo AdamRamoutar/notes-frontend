@@ -291,6 +291,8 @@
                         document.getElementById('newNoteTitle').value = `${note.title}`;
                         document.getElementById('newNote').value = `${note.content}`;
                         document.querySelector('.addNote-btn').textContent = 'Save';
+                        
+
                     });
 
                     
@@ -364,7 +366,8 @@
                 console.log('Note added');
                 document.getElementById('newNoteTitle').value = '';
                 document.getElementById('newNote').value = '';
-                
+                document.querySelector('.cancel-btn').style.display = "none";
+
                 loadNotes();
             }
             catch(err) {
